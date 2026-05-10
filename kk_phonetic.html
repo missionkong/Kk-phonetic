@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>KK音標專家</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;
+  --surface:#161920;
+  --surface2:#1e2230;
+  --surface3:#252a3a;
+  --accent:#6ee7b7;
+  --accent2:#a78bfa;
+  --accent3:#f472b6;
+  --text:#e8eaf0;
+  --text2:#8892a4;
+  --text3:#4a5568;
+  --border:#2a3045;
+  --border2:#3a4055;
+  --radius:12px;
+  --radius-sm:8px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Sora',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding:0;
+  line-height:1.6;
+}
+.noise-bg{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:0.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index:0;
+}
+.grid-bg{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:0.3;
+  z-index:0;
+}
+.container{
+  position:relative;
+  z-index:1;
+  max-width:760px;
+  margin:0 auto;
+  padding:2rem 1.25rem 4rem;
+}
+
+/* Header */
+.header{
+  text-align:center;
+  margin-bottom:3rem;
+  padding-top:1rem;
+}
+.logo-line{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  margin-bottom:0.75rem;
+}
+.logo-badge{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--accent);
+  background:rgba(110,231,183,0.08);
+  border:1px solid rgba(110,231,183,0.2);
+  padding:4px 10px;
+  border-radius:20px;
+}
+.site-title{
+  font-family:'Noto Serif TC',serif;
+  font-size:clamp(1.6rem,5vw,2.5rem);
+  font-weight:500;
+  color:var(--text);
+  line-height:1.2;
+}
+.site-subtitle{
+  font-size:0.85rem;
+  color:var(--text2);
+  letter-spacing:0.05em;
+}
+
+/* Search */
+.search-wrap{
+  display:flex;
+  gap:10px;
+  margin-bottom:2.5rem;
+}
+.search-input{
+  flex:1;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius);
+  padding:0.9rem 1.25rem;
+  font-family:'Space Mono',monospace;
+  font-size:1.05rem;
+  color:var(--text);
+  outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+  letter-spacing:0.05em;
+}
+.search-input::placeholder{color:var(--text3)}
+.search-input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(110,231,183,0.1);
+}
+.search-btn{
+  background:var(--accent);
+  border:none;
+  border-radius:var(--radius);
+  padding:0.9rem 1.5rem;
+  color:#0d1a14;
+  font-family:'Sora',sans-serif;
+  font-size:0.9rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:opacity 0.2s,transform 0.1s;
+  white-space:nowrap;
+}
+.search-btn:hover{opacity:0.88}
+.search-btn:active{transform:scale(0.97)}
+.search-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* Result card */
+.result-card{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:1.5rem;
+  display:none;
+}
+.result-card.visible{display:block;animation:fadeUp 0.4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.word-header{
+  padding:1.75rem 1.75rem 1.25rem;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+}
+.word-main{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.word-display{
+  font-family:'Space Mono',monospace;
+  font-size:clamp(1.6rem,5vw,2.4rem);
+  font-weight:700;
+  color:var(--text);
+  letter-spacing:0.05em;
+}
+.ipa-display{
+  font-family:'Space Mono',monospace;
+  font-size:clamp(1rem,3vw,1.3rem);
+  color:var(--accent);
+  letter-spacing:0.08em;
+}
+.speak-btn{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  padding:8px 14px;
+  color:var(--text2);
+  cursor:pointer;
+  font-size:1rem;
+  transition:all 0.2s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.speak-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Meaning */
+.meaning-row{
+  padding:1rem 1.75rem;
+  border-bottom:1px solid var(--border);
+  font-size:0.9rem;
+  color:var(--text2);
+}
+.meaning-label{color:var(--text3);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+
+/* Breakdown table */
+.breakdown-wrap{padding:1.25rem 1.75rem}
+.section-label{
+  font-size:0.75rem;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+  color:var(--text3);
+  margin-bottom:0.75rem;
+}
+.breakdown-table{width:100%;border-collapse:collapse}
+.breakdown-table th{
+  font-size:0.75rem;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--text3);
+  text-align:left;
+  padding:6px 12px;
+  border-bottom:1px solid var(--border);
+  font-weight:400;
+}
+.breakdown-table td{
+  padding:10px 12px;
+  font-size:0.9rem;
+  border-bottom:1px solid var(--border);
+}
+.breakdown-table tr:last-child td{border-bottom:none}
+.breakdown-table tr{transition:background 0.15s;cursor:pointer}
+.breakdown-table tr:hover td{background:var(--surface2)}
+.combo-cell{
+  font-family:'Space Mono',monospace;
+  font-size:1rem;
+  font-weight:700;
+  color:var(--accent2);
+  letter-spacing:0.08em;
+}
+.phoneme-cell{
+  font-family:'Space Mono',monospace;
+  color:var(--accent);
+}
+.desc-cell{color:var(--text2);font-size:0.85rem}
+.click-hint{
+  font-size:0.75rem;
+  color:var(--text3);
+  padding:0.5rem 1.75rem 1.25rem;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+/* Extension panel */
+.ext-panel{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:1.5rem;
+  display:none;
+}
+.ext-panel.visible{display:block;animation:fadeUp 0.35s ease}
+.ext-header{
+  padding:1.25rem 1.5rem;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.ext-title{
+  font-size:0.9rem;
+  color:var(--text2);
+}
+.ext-combo{
+  font-family:'Space Mono',monospace;
+  font-size:1.1rem;
+  color:var(--accent2);
+  font-weight:700;
+}
+.close-ext{
+  background:none;
+  border:none;
+  color:var(--text3);
+  cursor:pointer;
+  font-size:1.2rem;
+  line-height:1;
+  padding:4px;
+}
+.close-ext:hover{color:var(--text)}
+
+.variation-block{
+  padding:1.25rem 1.5rem;
+  border-bottom:1px solid var(--border);
+}
+.variation-block:last-child{border-bottom:none}
+.variation-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:0.75rem;
+}
+.phoneme-badge{
+  font-family:'Space Mono',monospace;
+  font-size:0.95rem;
+  background:rgba(110,231,183,0.1);
+  border:1px solid rgba(110,231,183,0.25);
+  color:var(--accent);
+  padding:4px 10px;
+  border-radius:6px;
+}
+.phoneme-badge.accent2{
+  background:rgba(167,139,250,0.1);
+  border-color:rgba(167,139,250,0.25);
+  color:var(--accent2);
+}
+.variation-rule{font-size:0.85rem;color:var(--text2);margin-bottom:0.75rem;line-height:1.5}
+.example-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:8px;
+}
+.example-chip{
+  background:var(--surface3);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px 10px;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.example-chip:hover{border-color:var(--accent2);background:var(--surface)}
+.example-word{
+  font-family:'Space Mono',monospace;
+  font-size:0.85rem;
+  font-weight:700;
+  color:var(--text);
+  display:block;
+  margin-bottom:2px;
+}
+.example-ipa{
+  font-family:'Space Mono',monospace;
+  font-size:0.75rem;
+  color:var(--accent);
+  display:block;
+}
+
+/* Loading */
+.loading{
+  text-align:center;
+  padding:3rem;
+  color:var(--text2);
+  display:none;
+}
+.loading.visible{display:block}
+.loader{
+  width:28px;
+  height:28px;
+  border:2px solid var(--border2);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  margin:0 auto 1rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Error */
+.error-msg{
+  background:rgba(244,114,182,0.08);
+  border:1px solid rgba(244,114,182,0.2);
+  border-radius:var(--radius);
+  padding:1rem 1.25rem;
+  color:var(--accent3);
+  font-size:0.9rem;
+  margin-bottom:1.5rem;
+  display:none;
+}
+.error-msg.visible{display:block}
+
+/* Tips */
+.tips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:2rem;
+}
+.tip-chip{
+  font-family:'Space Mono',monospace;
+  font-size:0.8rem;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:5px 12px;
+  color:var(--text2);
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.tip-chip:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* Footer */
+.footer{text-align:center;margin-top:3rem;font-size:0.78rem;color:var(--text3)}
+
+/* Mobile adjustments */
+@media(max-width:500px){
+  .word-header{padding:1.25rem}
+  .breakdown-wrap{padding:1rem 1.25rem}
+  .meaning-row{padding:0.75rem 1.25rem}
+  .click-hint{padding:0.5rem 1.25rem 1rem}
+  .example-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="noise-bg"></div>
+<div class="grid-bg"></div>
+<div class="container">
+  <div class="header">
+    <div class="logo-line">
+      <span class="logo-badge">AI Powered</span>
+    </div>
+    <h1 class="site-title">KK 音標專家</h1>
+    <p class="site-subtitle">輸入英文單字，取得完整音標解析與延伸學習</p>
+  </div>
+
+  <div class="tips" id="tips">
+    <span class="tip-chip" onclick="tryWord('quarter')">quarter</span>
+    <span class="tip-chip" onclick="tryWord('student')">student</span>
+    <span class="tip-chip" onclick="tryWord('beautiful')">beautiful</span>
+    <span class="tip-chip" onclick="tryWord('strength')">strength</span>
+    <span class="tip-chip" onclick="tryWord('through')">through</span>
+    <span class="tip-chip" onclick="tryWord('comfortable')">comfortable</span>
+  </div>
+
+  <div class="search-wrap">
+    <input class="search-input" id="wordInput" type="text" placeholder="輸入英文單字..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    <button class="search-btn" id="analyzeBtn" onclick="analyze()">分析</button>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="loading" id="loading"><div class="loader"></div><div>AI 分析中...</div></div>
+
+  <div class="result-card" id="resultCard">
+    <div class="word-header">
+      <div class="word-main">
+        <span class="word-display" id="wordDisplay"></span>
+        <span class="ipa-display" id="ipaDisplay"></span>
+      </div>
+      <button class="speak-btn" id="speakMainBtn" onclick="speak('')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        朗讀
+      </button>
+    </div>
+    <div class="meaning-row" id="meaningRow">
+      <div class="meaning-label">中文釋義</div>
+      <div id="meaningDisplay"></div>
+    </div>
+    <div class="breakdown-wrap">
+      <div class="section-label">發音拆解 — 點擊任一組合查看更多</div>
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>字母組合</th>
+            <th>KK 音標</th>
+            <th>發音說明</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownBody"></tbody>
+      </table>
+    </div>
+    <div class="click-hint">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      點擊上方任一列，查看該字母組合的所有發音規律與更多例字
+    </div>
+  </div>
+
+  <div class="ext-panel" id="extPanel">
+    <div class="ext-header">
+      <div>
+        <div class="ext-title">延伸學習：字母組合</div>
+        <div class="ext-combo" id="extCombo"></div>
+      </div>
+      <button class="close-ext" onclick="closeExt()">✕</button>
+    </div>
+    <div id="extContent"></div>
+  </div>
+
+  <div class="loading" id="loading2"><div class="loader"></div><div>載入延伸學習...</div></div>
+
+  <div class="footer">由 Claude AI 驅動 · 不需 API 金鑰</div>
+</div>
+
+<script>
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-sonnet-4-20250514";
+
+let currentWord = "";
+
+function tryWord(w){
+  document.getElementById("wordInput").value = w;
+  analyze();
+}
+
+document.getElementById("wordInput").addEventListener("keydown", e => {
+  if(e.key === "Enter") analyze();
+});
+
+function showError(msg){
+  const el = document.getElementById("errorMsg");
+  el.textContent = msg;
+  el.classList.add("visible");
+}
+function hideError(){document.getElementById("errorMsg").classList.remove("visible")}
+
+async function callClaude(systemPrompt, userPrompt){
+  const res = await fetch(API_URL, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages:[{role:"user", content: userPrompt}]
+    })
+  });
+  if(!res.ok) throw new Error(`API error ${res.status}`);
+  const data = await res.json();
+  return data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+
+function parseJSON(text){
+  const clean = text.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
+  try{return JSON.parse(clean)}catch{
+    const m = clean.match(/\{[\s\S]*\}/);
+    if(m) return JSON.parse(m[0]);
+    throw new Error("JSON 解析失敗");
+  }
+}
+
+async function analyze(){
+  const word = document.getElementById("wordInput").value.trim().toLowerCase();
+  if(!word) return;
+  currentWord = word;
+
+  hideError();
+  document.getElementById("resultCard").classList.remove("visible");
+  document.getElementById("extPanel").classList.remove("visible");
+  document.getElementById("loading").classList.add("visible");
+  document.getElementById("analyzeBtn").disabled = true;
+
+  const system = `你是台灣英語 KK 音標專家。請嚴格遵守以下 KK 音標規則：
+- 使用台灣教科書標準 KK 音標，不使用英式 IPA
+- 不使用長音冒號 ː，美式長母音直接用符號表示
+- 捲舌音必須保留 r（如 /ɔr/ /ɑr/ /ɚ/ /ɝ/）
+- 雙母音：用 e 代替 eɪ，用 o 代替 oʊ
+- 回傳純 JSON，不加任何說明文字或 markdown`;
+
+  const user = `分析英文單字「${word}」，回傳以下格式的 JSON（所有欄位必填）：
+{
+  "word": "原始單字",
+  "kk": "完整KK音標，含//",
+  "meaning": "簡短中文釋義（詞性+意思）",
+  "breakdown": [
+    {
+      "letters": "字母或字母組合",
+      "phoneme": "/音標/",
+      "description": "發音說明（20字內，繁體中文）"
+    }
+  ]
+}
+
+breakdow 必須涵蓋單字內所有字母，不可遺漏。`;
+
+  try{
+    const raw = await callClaude(system, user);
+    const data = parseJSON(raw);
+    renderResult(data);
+  }catch(e){
+    showError("分析失敗，請稍後再試。" + e.message);
+  }finally{
+    document.getElementById("loading").classList.remove("visible");
+    document.getElementById("analyzeBtn").disabled = false;
+  }
+}
+
+function renderResult(data){
+  document.getElementById("wordDisplay").textContent = data.word;
+  document.getElementById("ipaDisplay").textContent = data.kk;
+  document.getElementById("meaningDisplay").textContent = data.meaning;
+  document.getElementById("speakMainBtn").onclick = () => speak(data.word);
+
+  const tbody = document.getElementById("breakdownBody");
+  tbody.innerHTML = "";
+  (data.breakdown || []).forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="combo-cell">${row.letters}</td>
+      <td class="phoneme-cell">${row.phoneme}</td>
+      <td class="desc-cell">${row.description}</td>`;
+    tr.onclick = () => loadExtension(row.letters, row.phoneme, data.word);
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("resultCard").classList.add("visible");
+  document.getElementById("extPanel").classList.remove("visible");
+}
+
+async function loadExtension(letters, phoneme, context){
+  document.getElementById("extCombo").textContent = letters;
+  document.getElementById("extPanel").classList.remove("visible");
+  document.getElementById("extContent").innerHTML = "";
+  document.getElementById("loading2").classList.add("visible");
+
+  window.scrollTo({top: document.getElementById("resultCard").getBoundingClientRect().bottom + window.scrollY - 80, behavior:"smooth"});
+
+  const system = `你是台灣英語 KK 音標專家。嚴格使用台灣 KK 音標規範：不用長音冒號，保留捲舌 r，雙母音 eɪ→e、oʊ→o。回傳純 JSON。`;
+
+  const user = `字母組合「${letters}」在單字「${context}」中發音為 ${phoneme}。
+請分析這個字母組合所有可能的發音方式，回傳 JSON：
+{
+  "combo": "${letters}",
+  "variations": [
+    {
+      "phoneme": "/KK音標/",
+      "rule": "說明這個發音的規律（繁體中文，50字內）",
+      "examples": [
+        {"word": "範例單字", "kk": "/完整KK音標/"}
+      ]
+    }
+  ]
+}
+
+要求：
+- 至少列出 ${letters} 的 2 種以上發音（若真的只有一種也可）
+- 每種發音至少給 4 個常見例字
+- 例字的 kk 欄位必須是完整的單字音標`;
+
+  try{
+    const raw = await callClaude(system, user);
+    const data = parseJSON(raw);
+    renderExtension(data);
+  }catch(e){
+    document.getElementById("extContent").innerHTML = `<div style="padding:1.5rem;color:var(--accent3);font-size:0.88rem">載入失敗：${e.message}</div>`;
+  }finally{
+    document.getElementById("loading2").classList.remove("visible");
+    document.getElementById("extPanel").classList.add("visible");
+    setTimeout(()=>{
+      document.getElementById("extPanel").scrollIntoView({behavior:"smooth", block:"start"});
+    }, 100);
+  }
+}
+
+function renderExtension(data){
+  const badges = ["","accent2","","accent2","","accent2"];
+  const content = document.getElementById("extContent");
+  content.innerHTML = "";
+  (data.variations || []).forEach((v, i) => {
+    const block = document.createElement("div");
+    block.className = "variation-block";
+    const examplesHTML = (v.examples || []).map(ex => `
+      <div class="example-chip" onclick="speak('${ex.word}')">
+        <span class="example-word">${ex.word}</span>
+        <span class="example-ipa">${ex.kk}</span>
+      </div>`).join("");
+    block.innerHTML = `
+      <div class="variation-header">
+        <span class="phoneme-badge ${badges[i]}">${v.phoneme}</span>
+        <span style="font-size:0.78rem;color:var(--text3)">點擊例字可朗讀</span>
+      </div>
+      <div class="variation-rule">${v.rule}</div>
+      <div class="example-grid">${examplesHTML}</div>`;
+    content.appendChild(block);
+  });
+}
+
+function closeExt(){
+  document.getElementById("extPanel").classList.remove("visible");
+}
+
+function speak(word){
+  const w = word || currentWord;
+  if(!w) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(w);
+  u.lang = "en-US";
+  u.rate = 0.88;
+  const voices = window.speechSynthesis.getVoices();
+  const en = voices.find(v => v.lang === "en-US" && v.name.includes("Samantha"))
+           || voices.find(v => v.lang === "en-US");
+  if(en) u.voice = en;
+  window.speechSynthesis.speak(u);
+}
+window.speechSynthesis && window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
